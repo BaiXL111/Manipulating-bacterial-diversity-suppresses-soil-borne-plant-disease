@@ -1,0 +1,59 @@
+data <- read.csv("21.10.21bacterial bacterial_ASV_tax.csv",header = T, stringsAsFactors = FALSE, na.strings = " ", quote = "",check.names = FALSE)
+rownames(data) <- data$ASV_ID
+data <- data[,-1]
+data[data == "NA"] <- "Unassigned"
+
+
+## filter Chloroplast, Mitochondria and non-bacteria
+data.f1 <- data[which(data$Kingdom == "Bacteria"),]
+data.f1 <- data.f1[-which(data.f1$Order == "Chloroplast"),]
+data.f1 <- data.f1[-which(data.f1$Family == "Mitochondria"),]
+
+### check
+unique(data.f1$Kingdom)
+which(data.f1 == "Chloroplast")
+which(data.f1 == "Mitochondria")
+which(rowSums(data.f1[,1:76]) == 0)
+
+
+## Remove low abundant ASVs and rerarefy (at least 1 read in at least 2 samples)
+library(vegan)
+data.f3 <- data.f1[1:76]
+data.f4 <- data.f3[rowSums(data.f3 >= 1) >= 2, ]
+
+data.f2 <- cbind(rownames(data.f4),data.f4)
+colnames(data.f2)[1] <- "ASV_ID"
+which(rownames(data.f2) != data.f2$ASV_ID)
+#write.csv(data.f2,"ASV_filtered.csv",col.names = T,row.names = F)
+###³éÆ½
+data.f5 <-  as.data.frame(t(rrarefy(t(data.f4), min(colSums(data.f4)))))
+data.f5 <- data.f5[which(rowSums(data.f5) > 0),]
+
+## Save Result
+data.f6 <- cbind(rownames(data.f5),data.f5)
+colnames(data.f6)[1] <- "ASV_ID"
+which(rownames(data.f6) != data.f6$ASV_ID)
+write.csv(data.f6,"absolute.csv",col.names = T,row.names = F)
+
+data.f7 <- apply(data.f5, 2, function(x){x/sum(x)})
+data.f8 <- cbind(rownames(data.f7),data.f7)
+colnames(data.f8)[1] <- "ASV_ID"
+which(rownames(data.f8) != data.f8[,1])
+write.csv(data.f8,"relative.csv",col.names = T,row.names = F)
+
+## Select Taxonomy
+tax <- read.csv("21.10.21bacterial bacterial_tax.csv",row.names = 1)
+tax.f1 <- subset(tax,tax$ASV_ID %in% rownames(data.f5))
+write.csv(tax.f1,"Taxonomy.csv",col.names = T,row.names = F)
+tax.f1[tax.f1 == "NA"] <- "Unassigned"
+write.csv(tax.f1,"Taxonomy_Unassigned.csv",col.names = T,row.names = F)
+
+
+##Select ASV sequences
+install.packages("seqinr")
+library(seqinr)
+seq <- read.fasta(file = "21.10.21bacterialbacterial_ASV_fasta.fa",as.string = T)
+id <- rownames(data.f5)
+seq.f1 <- seq[which(names(seq) %in% id)]
+write.fasta(sequences = seq.f1, names = names(seq.f1),file.out = "ASV_sequences.fasta")
+

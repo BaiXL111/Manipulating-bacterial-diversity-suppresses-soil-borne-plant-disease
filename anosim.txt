@@ -1,0 +1,13 @@
+library(vegan)
+otu <- read.delim('1B_ASV_absolute.txt', row.names = 1, sep = '\t', stringsAsFactors = FALSE, check.names = FALSE)
+otu <- data.frame(t(otu))
+group <- read.delim('group.txt', sep = '\t', stringsAsFactors = FALSE)
+anosim_result <- anosim(otu, group$site, distance = 'bray', permutations = 999)
+#summary(anosim_result)
+names(anosim_result)
+anosim_result$signif     
+anosim_result$statistic  
+
+#pdf(paste('anosim.pdf', sep = ''), width = 10, height = 5)
+plot(anosim_result, col = c('black', 'red', 'blue', 'gray'))
+dev.off()

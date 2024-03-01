@@ -1,0 +1,12 @@
+library(agricolae)
+dat <- read.table("Genus.txt",header = TRUE,sep = "\t")
+head(dat)
+
+a <- dat[ ,c('sample', 'Genus', 'group')]
+
+a$group <- factor(a$group)
+str(a)
+head(a)
+
+comparison.protist_fdr <- with(a,kruskal(Genus,group, group = T, p.adj = "fdr"))
+comparison.protist_fdr

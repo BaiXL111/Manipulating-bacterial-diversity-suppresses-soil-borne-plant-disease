@@ -1,0 +1,9 @@
+library(psych)
+library(reshape2)
+env <- read.delim('1B_Richness.txt', sep = '\t', row.names = 1)
+spe <- read.delim('Root rot incidence.txt', sep = '\t', row.names = 1)
+spe <- spe[rownames(env), ]
+
+spearman <- corr.test(env, spe, method = 'spearman', adjust = 'none')
+r <- data.frame(spearman$r) 
+p <- data.frame(spearman$p) 

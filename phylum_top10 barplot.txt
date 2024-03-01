@@ -1,0 +1,14 @@
+phylum_top10 <- read.csv('1B_phylum_top10.csv', row.names = 1, stringsAsFactors = FALSE, check.names = FALSE)
+ 
+#barplot()
+png('1B_phylum_top10.png', width = 1000, height = 700)
+par(xpd = TRUE, mar = par()$mar + c(1, 3, 1, 16))
+ 
+barplot(as.matrix(100 * phylum_top10), col = c('#8DD3C7', '#FFFFB3', '#BEBADA', '#FB8072', '#80B1D3', '#FDB462', '#B3DE69', '#FCCDE5', '#BC80BD', '#CCEBC5', 'gray'),
+        legend = rownames(phylum_top10),
+        cex.axis = 2, cex.names = 2, ylim = c(0, 100), las = 1, width = 0.5, space = 0.5, beside = FALSE,
+        args.legend = list(x = 'right', bty = 'n', inset = -0.18, cex = 2, y.intersp = 1.2, x.intersp = 0.7, text.width = 1))
+ 
+mtext('Relative Abundance(%)', cex = 2, side = 2, line = 4)
+ 
+dev.off()

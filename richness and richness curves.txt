@@ -1,0 +1,71 @@
+library(vegan) 
+library(ggplot2)    
+library(ggalt)  
+
+otu <- read.delim('1B_ASV_absolute.txt', row.names = 1, sep = '\t', stringsAsFactors = FALSE, check.names = FALSE)
+otu=otu[,-dim(otu)[2]]
+otu <- t(otu)
+
+alpha_index <- function(x, method = 'richness', tree = NULL, base = exp(1)) {
+  if (method == 'richness') result <- rowSums(x > 0)    
+  else if (method == 'chao1') result <- estimateR(x)[3, ]    
+  else if (method == 'ace') result <- estimateR(x)[5, ]    
+  else if (method == 'shannon') result <- diversity(x, index = 'shannon', base = base)    
+  else if (method == 'simpson') result <- diversity(x, index = 'simpson')   
+  else if (method == 'pielou') result <- diversity(x, index = 'shannon', base = base) / log(estimateR(x)[1, ], base) 
+  else if (method == 'gc') result <- 1 - rowSums(x == 1) / rowSums(x)   
+  else if (method == 'pd' & !is.null(tree)) { 
+    pd <- pd(x, tree, include.root = FALSE)
+    result <- pd[ ,1]
+    names(result) <- rownames(pd)
+  }
+  result
+}
+
+#richness_curves
+alpha_curves <- function(x, step, method = 'richness', rare = NULL, tree = NULL, base = exp(1)) {
+  x_nrow <- nrow(x)
+  if (is.null(rare)) rare <- rowSums(x) else rare <- rep(rare, x_nrow)
+  alpha_rare <- list()
+  
+  for (i in 1:x_nrow) {
+    step_num <- seq(0, rare[i], step)
+    if (max(step_num) < rare[i]) step_num <- c(step_num, rare[i])
+    
+    alpha_rare_i <- NULL
+    for (step_num_n in step_num) alpha_rare_i <- c(alpha_rare_i, alpha_index(x = rrarefy(x[i, ], step_num_n), method = method, tree = tree, base = base))
+    names(alpha_rare_i) <- step_num
+    alpha_rare <- c(alpha_rare, list(alpha_rare_i))
+  }
+  
+  names(alpha_rare) <- rownames(x)
+  alpha_rare
+}
+
+plot_richness <- data.frame()
+
+for (n in 1:5) {
+  richness_curves <- alpha_curves(otu, step = 2000, method = 'richness')
+  
+  for (i in names(richness_curves)) {
+    richness_curves_i <- (richness_curves[[i]])
+    richness_curves_i <- data.frame(rare = names(richness_curves_i), alpha = richness_curves_i, sample = i, stringsAsFactors = FALSE)
+    plot_richness <- rbind(plot_richness, richness_curves_i)
+  }
+}
+
+library(doBy)
+plot_richness_stat <- summaryBy(alpha~sample+rare, plot_richness, FUN = c(mean, sd))
+plot_richness_stat$rare <- as.numeric(plot_richness_stat$rare)
+plot_richness_stat[which(plot_richness_stat$rare == 0),'alpha.sd'] <- NA
+
+p1<-ggplot(plot_richness_stat, aes(rare, alpha.mean, color = sample)) +
+  geom_line() +
+  geom_point() +
+  geom_errorbar(aes(ymin = alpha.mean - alpha.sd, ymax = alpha.mean + alpha.sd), width = 500) +
+  labs(x = 'Number of sequences', y = 'Richness', color = NULL) +
+  theme(panel.grid = element_blank(), panel.background = element_rect(fill = 'transparent', color = 'black'), legend.key = element_rect(fill = 'transparent')) +
+  geom_vline(xintercept = min(rowSums(otu)), linetype = 2) +
+  scale_x_continuous(breaks = seq(0, 30000, 5000), labels = as.character(seq(0, 30000, 5000)))
+p1
+ggsave("richness_curves.pdf", p, width = 5.5, height = 5.5)
